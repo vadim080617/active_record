@@ -18,7 +18,7 @@ class User extends Model {
       }
     ];
     this.relations = ['hasMany']; // need for building relations methods(getSubEntities, addSubEntity)
-    super.buildRelations();
+    super.buildRelations();      //
   }
 }
 
