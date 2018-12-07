@@ -1,53 +1,65 @@
 class Model {
-  static find(id) {
-    return global.db.query(`SELECT * from ${this.table()} WHERE id = ?`, [id])
-    .then(data => data[0]
-      ? data[0]
-      : null)
-    .catch( err => console.log(err));
+  static async get() {
+    const data = await global.db.query(`SELECT * from ${this.table()}`);
+    return data.map( el => {
+      return this.buildEntityObject(el);
+    })
   }
 
-  load(id) {
-  	  return this.constructor.find(id)
-      .then(data => {
-        for(let key in data) {
-          this[key] = data[key];
-        }
-      });
+
+  static buildEntityObject(dataObject) {
+    const entity = new this();
+
+    for(let key in dataObject) {
+      entity[key] = dataObject[key];
+    }
+
+    return entity;
   }
 
-  static where(conditions = []){   //[['field', 'operator', 'value']]
-    if(!conditions.length) return;
+  static async find(id) {
+    const data = await global.db.query(`SELECT * from ${this.table()} WHERE id = ?`, [id]);
+    const dataObject = data[0];
+    const entity = this.buildEntityObject(dataObject);
+    await entity.buildRelations();
+    return entity;
+  }
+
+  delete() {
+    const id = this[this.pk];
+
+    return global.db.query(`DELETE FROM ${this.constructor.table()} WHERE id = ?;`, [id]);
+  }
+
+  static async where(conditions = []){   //[['field', 'operator', 'value']]
     const conditionStr = conditions.reduce((acc, el, index, arr) => {
       const [field, operator] = el;
 
       return `${acc}AND ${field} ${operator} ? `;
     }, "").substr(4);   
 
-    return global.db.query(`SELECT * from ${this.table()} WHERE ${conditionStr}`, conditions.map(el => el[2]))
-    .catch( err => console.log(err));
-  }
+    const dataObjects = await global.db.query(`SELECT * from ${this.table()} WHERE ${conditionStr}`, conditions.map(el => el[2]));
 
-  static get() {
-  	return global.db.query(`SELECT * from ${this.table()}`);
+    return dataObjects.map( el => {
+      return this.buildEntityObject(el);
+    })
   }
 
   save() {
-    if(this.id) {
+    const id = this[this.pk];
+
+    if(id) {
       const questionSymbols = Array.from({length: this.fields.length - 1}, () => '?').join(', ');
       const keyValsString = this.fields.slice(1).map( el => {
         return this[el] !== undefined 
         ? `${el} = ?` 
         : `${el} = null` 
       });
-
       const avaibleValues = this.fields.slice(1).map( el => {
         return this[el]; 
       }).filter( el => el !== undefined);
 
-
-      return global.db.query(`UPDATE ${this.constructor.table()} SET ${keyValsString} WHERE id = ?;`, [...avaibleValues, this.id])
-      .catch( err => console.log(err));
+      return global.db.query(`UPDATE ${this.constructor.table()} SET ${keyValsString} WHERE id = ?;`, [...avaibleValues, id]);
 
     } else {
       const questionSymbols = Array.from({length: this.fields.length - 1}, () => '?').join(', ');
@@ -57,43 +69,31 @@ class Model {
 
       return global.db.query(`INSERT INTO ${this.constructor.table()} (${this.fields.slice(1).join(', ')}) 
         VALUES (${questionSymbols})`,
-        [...values.slice(1)])
-        .catch( err => console.log(err));
+        [...values.slice(1)]);
     }
   }
 
-  delete() {
-      return global.db.query(`DELETE FROM ${this.constructor.table()} WHERE id = ?;`, [this.id]);
-  }
-
-  buildRelations() { //implemens different types of relations such as hasMany or hasOne or smsElse
+  async buildRelations() { //implemens different types of relations such as hasMany or hasOne or smsElse
     if(this.relations) {
-      this.relations.forEach( relation => {
+      for(let i = 0; i < this.relations.length; i++) {
+        const relation = this.relations[i];
+
         switch (relation) {
           case 'hasMany' :
-            this[relation].forEach( item => {
-              this.__defineGetter__(item.model.table(), async () => {
-                const entities = await item.model.where([[item.foreignKey, '=', this[item.primaryKey]]])
+            for(let j = 0; j < this[relation].length; j++) {
+              const item = this[relation][j];
 
-                const models = [];
-                for(let i = 0; i < entities.length; i++) {
-                  const obj = new item.model();
-                  await obj.load(entities[i].id);
-                  models.push(obj);
-                }
-
-                return models;
-
-              })
+              this[item.model.table()] = await item.model.where([[item.foreignKey, '=', this[item.primaryKey]]]);
 
               this[`add${item.model.name}`] = async (entity) => {
+                this[item.model.table()].push(entity);
                 entity[item.foreignKey] = this.id;
                 await entity.save();
               }
-            })
+            }
           break;
         }
-      })
+      }
     }
   }
 }

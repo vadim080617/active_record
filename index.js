@@ -18,54 +18,47 @@ global.db.query = util.promisify(global.db.query);
 
 (async function() {
 
+// //						all users
+// console.log(await User.get());
+
+
+
 // //					Открыть с БД и вывести в консоль сузествующего пользователя с машинами
 
-// console.log(await User.get());
-// console.log(await Car.get());
+// const user = await User.find(1);
+// console.log(user);
 
 // //					Создать нового пользователя
 
 // const newUser = new User();
-// newUser.first_name = 'fn';
-// newUser.last_name = 'ln';
-// newUser.age = 222;
-// newUser.gender = 'F';
+// newUser.first_name = 'Glek';
+// newUser.last_name = 'asvgsbjbnjkfkjfkf';
+// newUser.age = 521;
+// newUser.gender = 'M';
 // await newUser.save();
-
-// const newCar = new Car();
-// newCar.user_id = 1;
-// newCar.model = 'Deo Nexia';
-// newCar.year = 1998;
-// await newCar.save();
-
 
 
 // //					Изменить имя пользователю
-// const user = new User();
-// await user.load(13);
-// user.first_name = 'NEW FIRST NAME';
-// user.last_name = 'NEW LAST NAME';
-// await user.save();
 
+// const user20 = await User.find(20);
+// user20.first_name = 'NEW_NAME';
+// await user20.save();
 
-// const car = new Car();
-// await car.load(4);
-// car.year = 2015;
-// await car.save();
-////					Удалить пользователя
+// //					Удалить пользователя
 
-// const user6 = new User();
+// const user6 = await User.find(13);
+// await user6.delete();
 
-//пример использования where
-//console.log(await User.where([['age', '=', 222], ['first_name', '=', 'fn'], ['id', '>', '20']]));
+// //пример использования where
+// console.log(await User.where([['age', '=', 222], ['first_name', '=', 'fn'], ['id', '>', '20']]));
 
-//				// Добавить пользователю новую машину
+// 				// Добавить пользователю новую машину
 
-// const user = new User();
-// await user.load(2);
-// car = new Car();
-// car.model = 'Audi';
-// car.year = '2015';
-// await user.addCar(car);
-// console.log(await user.cars);
+// const user2 = await User.find(2);
+// console.log(user2.cars);
+// const newCar = new Car();
+// newCar.model = 'Pejo';
+// newCar.year = 2009;
+// await user.addCar(newCar);
+// console.log(user.cars);
 })()
